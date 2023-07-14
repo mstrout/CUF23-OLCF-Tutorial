@@ -46,4 +46,4 @@ for 1..nt {
 // print final results
 const mean = (+ reduce u) / u.size,
       stdDev = sqrt((+ reduce (u - mean)**2) / u.size);
-writeln((0.102424 - stdDev) < 1e-6);
+writeln("mean: ", mean, " stdDev: ", stdDev);
