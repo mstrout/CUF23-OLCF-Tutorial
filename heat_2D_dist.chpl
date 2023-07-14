@@ -1,3 +1,16 @@
+/*
+  A distributed 2D finite-difference heat/diffusion equation solver
+
+  Computation is executed over a 2D distributed array.
+	The array distribution and sharing of "fluff"/"halo"
+	regions are managed by the `Stencil` distribution. The
+	`forall` loop manages task creation and synchronization
+	across and within locales.
+
+  Values of the `config const` variables can be modified in
+  the command line (e.g., `./heat_2D_dist --nt=100`)
+*/
+
 use StencilDist;
 
 // declare configurable constants with default values

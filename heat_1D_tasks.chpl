@@ -1,3 +1,15 @@
+/*
+  A 1D finite difference heat/diffusion equation solver
+
+  Computation is local (single compute node). Tasks are spawned
+  manually using a `coforall` loop and synchronization is
+	managed via `sync` variables in a global array of ghost
+	cells.
+
+  Values of the `config const` variables can be modified in
+  the command line (e.g., `./heat_1D --nt=100`)
+*/
+
 // declare configurable constants with default values
 config const xLen = 2.0,    // length of the grid in x
              nx = 31,       // number of grid points in x
@@ -25,6 +37,14 @@ u[(0.5 / dx):int..<(1.0 / dx + 1):int] = 2;
 // define array of ghost cells for each side of each task
 var ghosts : [0..1, 0..<nTasks] sync real;
 param LEFT = 0, RIGHT = 1;
+
+// run the simulation across tasks
+coforall tid in 0..<nTasks do work(tid);
+
+// print final results
+const mean = (+ reduce u) / u.size,
+      stdDev = sqrt((+ reduce (u - mean)**2) / u.size);
+writeln("mean: ", mean, " stdDev: ", stdDev);
 
 proc work(tid: int) {
   // define region of the global array owned by this task
@@ -60,14 +80,6 @@ proc work(tid: int) {
 		}
 
   // store this task's results in global array
-	uLocal1 <=> uLocal2;
+  uLocal1 <=> uLocal2;
   u[taskIndices] = uLocal1[taskIndices];
 }
-
-// run the simulation across tasks
-coforall tid in 0..<nTasks do work(tid);
-
-// print final results
-const mean = (+ reduce u) / u.size,
-      stdDev = sqrt((+ reduce (u - mean)**2) / u.size);
-writeln("mean: ", mean, " stdDev: ", stdDev);

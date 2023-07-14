@@ -1,3 +1,13 @@
+/*
+  A 1D finite-difference heat/diffusion equation solver
+
+  Computation is local (single compute node) and runs
+  the kernel in parallel using a `forall` loop
+
+  Values of the `config const` variables can be modified in
+  the command line (e.g., `./heat_1D --nt=100`)
+*/
+
 // declare configurable constants with default values
 config const xLen = 2.0,    // length of the grid in x
              nx = 31,       // number of grid points in x

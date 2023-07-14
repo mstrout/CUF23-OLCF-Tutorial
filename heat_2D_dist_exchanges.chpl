@@ -1,3 +1,16 @@
+/*
+  A distributed 2D finite-difference heat/diffusion equation solver
+
+  Computation is executed over a 2D distributed array.
+	The array distribution is managed by the `Block` distribution.
+	Tasks are spawned manually with a `coforall` loop and synchronization
+	is done manually using a `barrier`. Halo regions are shared across
+  locales manually via direct assignment between arrays.
+
+  Values of the `config const` variables can be modified in
+  the command line (e.g., `./heat_2D_exchanges --nt=100`)
+*/
+
 import BlockDist.Block,
        Collectives.barrier;
 
