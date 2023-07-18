@@ -58,7 +58,7 @@ record localArray {
   var v: [d] real;
 
   proc init() do this.d = {0..0, 0..0};
-  proc init(d: domain(2)) do this.d = d;
+  proc init(dGlobal: domain(2)) do this.d = dGlobal;
 }
 
 // set up an arrays of local arrays over same distribution as 'u.targetLocales'
@@ -71,7 +71,7 @@ proc main() {
   // spawn one task for each locale
   coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) {
     // run initialization and computation on the task for this locale
-    on loc do work(tidX, tidY);
+    on loc { work(tidX, tidY); }
   }
 
   if RunCommDiag {
@@ -105,20 +105,26 @@ proc work(tidX: int, tidY: int) {
   unLocal = uLocal;
 
   // define constants for indexing into edges of local array
-  const NN = localIndicesBuffered.dim(1).low,
-        SS = localIndicesBuffered.dim(1).high,
-        EE = localIndicesBuffered.dim(0).high,
-        WW = localIndicesBuffered.dim(0).low;
+  const N = myGlobalIndices.dim(1).low,
+        S = myGlobalIndices.dim(1).high,
+        E = myGlobalIndices.dim(0).high,
+        W = myGlobalIndices.dim(0).low;
 
   b.barrier();
+
+  // define constants for indexing into halo regions of neighboring arrays
+  const NN = if tidY < tidYMax then unTaskLocal[tidX, tidY+1].d.dim(1).low else 0,
+        SS = if tidY > 0       then unTaskLocal[tidX, tidY-1].d.dim(1).high else 0,
+        WW = if tidX < tidXMax then unTaskLocal[tidX+1, tidY].d.dim(0).low else 0,
+        EE = if tidX > 0       then unTaskLocal[tidX-1, tidY].d.dim(0).high else 0;
 
   // run FD computation
   for 1..nt {
     // store results from last iteration in neighboring task's halos
-    if tidX > 0       then unTaskLocal[tidX-1, tidY].v[EE, ..] = unLocal[WW+1, ..];
-    if tidX < tidXMax then unTaskLocal[tidX+1, tidY].v[WW, ..] = unLocal[EE-1, ..];
-    if tidY > 0       then unTaskLocal[tidX, tidY-1].v[.., SS] = unLocal[.., NN+1];
-    if tidY < tidYMax then unTaskLocal[tidX, tidY+1].v[.., NN] = unLocal[.., SS-1];
+    if tidX > 0       then unTaskLocal[tidX-1, tidY].v[EE, ..] = unLocal[W, ..];
+    if tidX < tidXMax then unTaskLocal[tidX+1, tidY].v[WW, ..] = unLocal[E, ..];
+    if tidY > 0       then unTaskLocal[tidX, tidY-1].v[.., SS] = unLocal[.., N];
+    if tidY < tidYMax then unTaskLocal[tidX, tidY+1].v[.., NN] = unLocal[.., S];
 
     // swap all local arrays
     b.barrier();
