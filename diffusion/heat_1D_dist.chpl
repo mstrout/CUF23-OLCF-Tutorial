@@ -46,7 +46,7 @@ for 1..nt {
   // update the solution over the interior of the domain in parallel
   forall i in indicesInner do
     u[i] = un[i] + nu * dt / dx**2 *
-                (un[i-1] - 2 * un[i] + un[i+1]);
+            (un[i-1] - 2 * un[i] + un[i+1]);
 }
 
 // print final results

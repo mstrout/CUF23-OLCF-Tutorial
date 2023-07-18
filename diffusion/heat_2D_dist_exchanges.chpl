@@ -14,8 +14,9 @@
 import BlockDist.Block,
        Collectives.barrier;
 
+// compile with `-sRunCommDiag=true` to see comm diagnostics
 use CommDiagnostics;
-config param runCommDiag = false;
+config param RunCommDiag = false;
 
 // declare configurable constants with default values
 config const xLen = 2.0,    // length of the grid in x
@@ -51,10 +52,10 @@ const tidXMax = u.targetLocales().dim(0).high,
 // barrier for one task per locale
 var b = new barrier(u.targetLocales().size);
 
-// North, East, South, West
+// buffer edge enum: North, East, South, West
 enum Edge { N, E, S, W }
 
-// record to store a tasks local arrays and facilitate sharing of
+// a type to store a tasks local arrays and facilitate sharing of
 //  halo regions between neighboring tasks
 record localArrayPair {
   // the set of global indices that this locale owns
@@ -118,7 +119,7 @@ var LOCALE_DOM = Block.createDomain(u.targetLocales().domain),
     uTaskLocal : [LOCALE_DOM] localArrayPair;
 
 proc main() {
-  if runCommDiag then startVerboseComm();
+  if RunCommDiag then startCommDiagnostics();
 
   // spawn one task for each locale
   coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) {
@@ -139,8 +140,8 @@ proc main() {
     }
   }
 
-  if runCommDiag {
-    stopVerboseComm();
+  if RunCommDiag {
+    stopCommDiagnostics();
     printCommDiagnosticsTable();
   }
 

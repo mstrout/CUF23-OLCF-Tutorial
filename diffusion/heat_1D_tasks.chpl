@@ -16,7 +16,7 @@ config const xLen = 2.0,    // length of the grid in x
              nt = 50,       // number of time steps
              sigma = 0.25,  // stability parameter
              nu = 0.05,     // viscosity
-						 nTasks = here.maxTaskPar; // number of tasks
+            nTasks = here.maxTaskPar; // number of tasks
 
 // define non-configurable constants
 const dx : real = xLen / (nx - 1),       // grid spacing in x

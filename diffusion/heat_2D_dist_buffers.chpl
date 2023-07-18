@@ -14,8 +14,9 @@
 import BlockDist.Block,
        Collectives.barrier;
 
+// compile with `-sRunCommDiag=true` to see comm diagnostics
 use CommDiagnostics;
-config param runCommDiag = false;
+config param RunCommDiag = false;
 
 // declare configurable constants with default values
 config const xLen = 2.0,    // length of the grid in x
@@ -44,7 +45,7 @@ u[
   (0.5 / dy):int..<(1.0 / dy + 1):int
 ] = 2;
 
-// type for creating a "skyline" array of halos
+// a type for creating a "skyline" array of halo buffers
 record haloArray {
   var d: domain(1);
   var v: [d] real;
@@ -54,11 +55,11 @@ record haloArray {
     this.d = {r};
 }
 
-// set up array of halos over same distribution as 'u.targetLocales'
-var TL_DOM = Block.createDomain(u.targetLocales().domain);
-var haloArrays: [TL_DOM] [0..<4] haloArray;
+// set up array of halo buffers over same distribution as 'u.targetLocales'
+var LOCALE_DOM = Block.createDomain(u.targetLocales().domain);
+var haloArrays: [LOCALE_DOM] [0..<4] haloArray;
 
-// numbers for indexing into local array edges
+// buffer edge indices: North, East, South, West
 param N = 0, S = 1, E = 2, W = 3;
 
 // number of tasks per dimension based on Block distribution's decomposition
@@ -69,10 +70,10 @@ const tidXMax = u.targetLocales().dim(0).high,
 var b = new barrier(numLocales);
 
 proc main() {
-  if runCommDiag then startCommDiagnostics();
+  if RunCommDiag then startCommDiagnostics();
 
   // spawn one task for each locale
-  coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), u.targetLocales().domain) {
+  coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) {
     // run initialization and computation on the task for this locale
     on loc {
       // initialize halo arrays
@@ -89,7 +90,7 @@ proc main() {
     }
   }
 
-  if runCommDiag {
+  if RunCommDiag {
     stopCommDiagnostics();
     printCommDiagnosticsTable();
   }
@@ -121,7 +122,7 @@ proc work(tidX: int, tidY: int) {
 
   // iterate for 'nt' time steps
   for 1..nt {
-    // store results from last iteration in neighboring task's halos
+    // store results from last iteration in neighboring task's halo buffers
     if tidY > 0       then haloArrays[tidX, tidY-1][E].v = uLocal2[.., WW+1];
     if tidY < tidYMax then haloArrays[tidX, tidY+1][W].v = uLocal2[.., EE-1];
     if tidX > 0       then haloArrays[tidX-1, tidY][S].v = uLocal2[NN+1, ..];
@@ -131,7 +132,7 @@ proc work(tidX: int, tidY: int) {
     b.barrier();
     uLocal1 <=> uLocal2;
 
-    // populate edges of local array from halo arrays
+    // populate edges of local array from halo buffers
     if tidY > 0       then uLocal1[.., WW] = haloArrays[tidX, tidY][W].v;
     if tidY < tidYMax then uLocal1[.., EE] = haloArrays[tidX, tidY][E].v;
     if tidX > 0       then uLocal1[NN, ..] = haloArrays[tidX, tidY][N].v;
