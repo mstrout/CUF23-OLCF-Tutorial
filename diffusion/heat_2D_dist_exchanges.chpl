@@ -52,71 +52,18 @@ const tidXMax = u.targetLocales().dim(0).high,
 // barrier for one task per locale
 var b = new barrier(u.targetLocales().size);
 
-// buffer edge enum: North, East, South, West
-enum Edge { N, E, S, W }
+// a type for creating a "skyline" array of local arrays
+record localArray {
+  var d: domain(2);
+  var v: [d] real;
 
-// a type to store a tasks local arrays and facilitate sharing of
-//  halo regions between neighboring tasks
-record localArrayPair {
-  // the set of global indices that this locale owns
-  //  used to index into the global array
-  var globalIndices: domain(2);
-
-  // indices over which local arrays are defined
-  //  same as 'globalIndices' set with a halo regions along edges
-  var indices: domain(2);
-
-  // indices over which the kernel is executed
-  //  can differ from 'globalIndices' for locales with
-  //  indices on the border of the global domain
-  var compIndices: domain(2);
-
-  var u: [indices] real;
-  var un: [indices] real;
-
-  // default initializer
-  proc init() {
-    this.globalIndices = {0..0, 0..0};
-    this.indices = {0..0, 0..0};
-    this.compIndices = {0..0, 0..0};
-  }
-
-  proc init(myGlobalIndices: domain(2), globalInnerAll: domain(2)) {
-    this.globalIndices = myGlobalIndices;
-    this.indices = myGlobalIndices.expand(1);
-    this.compIndices = myGlobalIndices[globalInnerAll];
-  }
-
-  proc ref copyInitialConditions(const ref uGlobal: [] real) {
-    this.u = 1.0;
-    this.u[this.globalIndices] = uGlobal[globalIndices];
-    this.un = this.u;
-  }
-
-   proc fillHalo(edge: Edge, const ref values: [] real) {
-    select edge {
-      when Edge.N do this.un[.., this.indices.dim(1).low] = values;
-      when Edge.S do this.un[.., this.indices.dim(1).high] = values;
-      when Edge.E do this.un[this.indices.dim(0).high, ..] = values;
-      when Edge.W do this.un[this.indices.dim(0).low, ..] = values;
-    }
-  }
-
-  // `[ ]` access
-  proc this(edge: Edge) {
-    select edge {
-      when Edge.N do return this.un[.., this.indices.dim(1).low+1];
-      when Edge.S do return this.un[.., this.indices.dim(1).high-1];
-      when Edge.E do return this.un[this.indices.dim(0).high-1, ..];
-      when Edge.W do return this.un[this.indices.dim(0).low+1, ..];
-    }
-    return this.un[this.indices.dim(0).low, ..]; // never actually returned
-  }
+  proc init() do this.d = {0..0, 0..0};
+  proc init(d: domain(2)) do this.d = d;
 }
 
-// set up an array of local arrays over same distribution as 'u.targetLocales'
-var LOCALE_DOM = Block.createDomain(u.targetLocales().domain),
-    uTaskLocal : [LOCALE_DOM] localArrayPair;
+// set up an arrays of local arrays over same distribution as 'u.targetLocales'
+var LOCALE_DOM = Block.createDomain(u.targetLocales().domain);
+var uTaskLocal, unTaskLocal: [LOCALE_DOM] localArray;
 
 proc main() {
   if RunCommDiag then startCommDiagnostics();
@@ -124,20 +71,7 @@ proc main() {
   // spawn one task for each locale
   coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) {
     // run initialization and computation on the task for this locale
-    on loc {
-      // initialize local array pairs
-      uTaskLocal[tidX, tidY] = new localArrayPair(
-        u.localSubdomain(here), // indices owned by this locale from `Block` dist
-        indicesInner            // global "compIndices"
-      );
-      uTaskLocal[tidX, tidY].copyInitialConditions(u);
-
-      // synchronize across tasks
-      b.barrier();
-
-      // run the portion of the FD computation owned by this task
-      work(tidX, tidY);
-    }
+    on loc do work(tidX, tidY);
   }
 
   if RunCommDiag {
@@ -152,33 +86,56 @@ proc main() {
 }
 
 proc work(tidX: int, tidY: int) {
-  // get a reference to this task's local array-pair
-  ref uLocal = uTaskLocal[tidX, tidY];
+  // define domains to describe the indices owned by this task
+  const myGlobalIndices = u.localSubdomain(here),
+        localIndicesBuffered = myGlobalIndices.expand(1),
+        localIndicesInner = myGlobalIndices[indicesInner];
+
+  // initialize this tasks local arrays using indices from `Block` dist.
+  uTaskLocal[tidX, tidY] = new localArray(localIndicesBuffered);
+  unTaskLocal[tidX, tidY] = new localArray(localIndicesBuffered);
+
+  // get a reference to this task's local arrays
+  ref uLocal = uTaskLocal[tidX, tidY].v;
+  ref unLocal = unTaskLocal[tidX, tidY].v;
+
+  // copy initial conditions from global array
+  uLocal = 1;
+  uLocal[myGlobalIndices] = u[myGlobalIndices];
+  unLocal = uLocal;
+
+  // define constants for indexing into edges of local array
+  const NN = localIndicesBuffered.dim(1).low,
+        SS = localIndicesBuffered.dim(1).high,
+        EE = localIndicesBuffered.dim(0).high,
+        WW = localIndicesBuffered.dim(0).low;
+
+  b.barrier();
 
   // run FD computation
   for 1..nt {
     // store results from last iteration in neighboring task's halos
-    if tidX > 0       then uTaskLocal[tidX-1, tidY].fillHalo(Edge.E, uLocal[Edge.W]);
-    if tidX < tidXMax then uTaskLocal[tidX+1, tidY].fillHalo(Edge.W, uLocal[Edge.E]);
-    if tidY > 0       then uTaskLocal[tidX, tidY-1].fillHalo(Edge.S, uLocal[Edge.N]);
-    if tidY < tidYMax then uTaskLocal[tidX, tidY+1].fillHalo(Edge.N, uLocal[Edge.S]);
+    if tidX > 0       then unTaskLocal[tidX-1, tidY].v[EE, ..] = unLocal[WW+1, ..];
+    if tidX < tidXMax then unTaskLocal[tidX+1, tidY].v[WW, ..] = unLocal[EE-1, ..];
+    if tidY > 0       then unTaskLocal[tidX, tidY-1].v[.., SS] = unLocal[.., NN+1];
+    if tidY < tidYMax then unTaskLocal[tidX, tidY+1].v[.., NN] = unLocal[.., SS-1];
 
-    // swap local arrays
+    // swap all local arrays
     b.barrier();
-    uLocal.u <=> uLocal.un;
+    uLocal <=> unLocal;
 
     // compute the FD kernel in parallel
-    foreach (i, j) in uLocal.compIndices do
-      uLocal.un[i, j] = uLocal.u[i, j] +
+    foreach (i, j) in localIndicesInner do
+      unLocal[i, j] = uLocal[i, j] +
               nu * dt / dy**2 *
-                (uLocal.u[i-1, j] - 2 * uLocal.u[i, j] + uLocal.u[i+1, j]) +
+                (uLocal[i-1, j] - 2 * uLocal[i, j] + uLocal[i+1, j]) +
               nu * dt / dx**2 *
-                (uLocal.u[i, j-1] - 2 * uLocal.u[i, j] + uLocal.u[i, j+1]);
+                (uLocal[i, j-1] - 2 * uLocal[i, j] + uLocal[i, j+1]);
 
     b.barrier();
   }
 
   // store results in global array
-  uLocal.u <=> uLocal.un;
-  u[uLocal.globalIndices] = uLocal.u[uLocal.globalIndices];
+  uLocal <=> unLocal;
+  u[myGlobalIndices] = uLocal[myGlobalIndices];
 }
