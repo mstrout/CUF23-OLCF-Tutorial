@@ -2,10 +2,10 @@
   A distributed 2D finite-difference heat/diffusion equation solver
 
   Computation is executed over a 2D distributed array.
-	The array distribution is managed by the `Block` distribution.
-	Tasks are spawned manually with a `coforall` loop and synchronization
-	is done manually using a `barrier`. Halo regions are shared across
-	locales manually via buffer arrays.
+  The array distribution is managed by the `Block` distribution.
+  Tasks are spawned manually with a `coforall` loop and synchronization
+  is done manually using a `barrier`. Halo regions are shared across
+  locales manually via halo/buffer arrays.
 
   Values of the `config const` variables can be modified in
   the command line (e.g., `./heat_2D_buffers --nt=100`)
@@ -44,8 +44,8 @@ u[
   (0.5 / dy):int..<(1.0 / dy + 1):int
 ] = 2;
 
-// ghost-vector type for creating a "skyline" array of buffers
-record GhostVec {
+// type for creating a "skyline" array of halos
+record haloArray {
   var d: domain(1);
   var v: [d] real;
 
@@ -54,9 +54,9 @@ record GhostVec {
     this.d = {r};
 }
 
-// set up array of ghost vectors over same distribution as 'u.targetLocales'
+// set up array of halos over same distribution as 'u.targetLocales'
 var TL_DOM = Block.createDomain(u.targetLocales().domain);
-var ghostVecs: [TL_DOM] [0..<4] GhostVec;
+var haloArrays: [TL_DOM] [0..<4] haloArray;
 
 // numbers for indexing into local array edges
 param N = 0, S = 1, E = 2, W = 3;
@@ -71,19 +71,22 @@ var b = new barrier(numLocales);
 proc main() {
   if runCommDiag then startCommDiagnostics();
 
-  // execute the FD computation with one task per locale
-  coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), u.targetLocales().domain) do on loc {
-    // initialize ghost vectors
-    ghostVecs[tidX, tidY][N] = new GhostVec(u.localSubdomain().dim(1).expand(1));
-    ghostVecs[tidX, tidY][S] = new GhostVec(u.localSubdomain().dim(1).expand(1));
-    ghostVecs[tidX, tidY][E] = new GhostVec(u.localSubdomain().dim(0).expand(1));
-    ghostVecs[tidX, tidY][W] = new GhostVec(u.localSubdomain().dim(0).expand(1));
+  // spawn one task for each locale
+  coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), u.targetLocales().domain) {
+    // run initialization and computation on the task for this locale
+    on loc {
+      // initialize halo arrays
+      haloArrays[tidX, tidY][N] = new haloArray(u.localSubdomain().dim(1).expand(1));
+      haloArrays[tidX, tidY][S] = new haloArray(u.localSubdomain().dim(1).expand(1));
+      haloArrays[tidX, tidY][E] = new haloArray(u.localSubdomain().dim(0).expand(1));
+      haloArrays[tidX, tidY][W] = new haloArray(u.localSubdomain().dim(0).expand(1));
 
-    // synchronize across tasks
-    b.barrier();
+      // synchronize across tasks
+      b.barrier();
 
-    // run the portion of the FD computation owned by this task
-    work(tidX, tidY);
+      // run the portion of the FD computation owned by this task
+      work(tidX, tidY);
+    }
   }
 
   if runCommDiag {
@@ -118,29 +121,29 @@ proc work(tidX: int, tidY: int) {
 
   // iterate for 'nt' time steps
   for 1..nt {
-    // store results from last iteration in neighboring task's buffers
-    if tidY > 0       then ghostVecs[tidX, tidY-1][E].v = uLocal2[.., WW+1];
-    if tidY < tidYMax then ghostVecs[tidX, tidY+1][W].v = uLocal2[.., EE-1];
-    if tidX > 0       then ghostVecs[tidX-1, tidY][S].v = uLocal2[NN+1, ..];
-    if tidX < tidXMax then ghostVecs[tidX+1, tidY][N].v = uLocal2[SS-1, ..];
+    // store results from last iteration in neighboring task's halos
+    if tidY > 0       then haloArrays[tidX, tidY-1][E].v = uLocal2[.., WW+1];
+    if tidY < tidYMax then haloArrays[tidX, tidY+1][W].v = uLocal2[.., EE-1];
+    if tidX > 0       then haloArrays[tidX-1, tidY][S].v = uLocal2[NN+1, ..];
+    if tidX < tidXMax then haloArrays[tidX+1, tidY][N].v = uLocal2[SS-1, ..];
 
     // swap local arrays
     b.barrier();
     uLocal1 <=> uLocal2;
 
-    // populate edges of local array from buffers
-    if tidY > 0       then uLocal1[.., WW] = ghostVecs[tidX, tidY][W].v;
-    if tidY < tidYMax then uLocal1[.., EE] = ghostVecs[tidX, tidY][E].v;
-    if tidX > 0       then uLocal1[NN, ..] = ghostVecs[tidX, tidY][N].v;
-    if tidX < tidXMax then uLocal1[SS, ..] = ghostVecs[tidX, tidY][S].v;
+    // populate edges of local array from halo arrays
+    if tidY > 0       then uLocal1[.., WW] = haloArrays[tidX, tidY][W].v;
+    if tidY < tidYMax then uLocal1[.., EE] = haloArrays[tidX, tidY][E].v;
+    if tidX > 0       then uLocal1[NN, ..] = haloArrays[tidX, tidY][N].v;
+    if tidX < tidXMax then uLocal1[SS, ..] = haloArrays[tidX, tidY][S].v;
 
     // compute the FD kernel in parallel
     forall (i, j) in localIndicesInner do
       uLocal2[i, j] = uLocal1[i, j] +
-											nu * dt / dy**2 *
-												(uLocal1[i-1, j] - 2 * uLocal1[i, j] + uLocal1[i+1, j]) +
-											nu * dt / dx**2 *
-												(uLocal1[i, j-1] - 2 * uLocal1[i, j] + uLocal1[i, j+1]);
+        nu * dt / dy**2 *
+          (uLocal1[i-1, j] - 2 * uLocal1[i, j] + uLocal1[i+1, j]) +
+        nu * dt / dx**2 *
+          (uLocal1[i, j-1] - 2 * uLocal1[i, j] + uLocal1[i, j+1]);
 
     b.barrier();
   }

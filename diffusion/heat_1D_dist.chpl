@@ -2,8 +2,8 @@
   A distributed 1D finite-difference heat/diffusion equation solver
 
   Computation is executed over a 1D distributed array.
-	The array distribution is managed by the `Block` distribution.
-	Values are shared between neighboring locales using implicit
+  The array distribution is managed by the `Block` distribution.
+  Values are shared between neighboring locales using implicit
   communication. The `forall` loop manages task creation and
   synchronization across and within locales.
 

@@ -2,10 +2,10 @@
   A distributed 2D finite-difference heat/diffusion equation solver
 
   Computation is executed over a 2D distributed array.
-	The array distribution is managed by the `Block` distribution.
-	Tasks are spawned manually with a `coforall` loop and synchronization
-	is done manually using a `barrier`. Halo regions are shared across
-  locales manually via direct assignment between arrays.
+  The array distribution is managed by the `Block` distribution.
+  Tasks are spawned manually with a `coforall` loop and synchronization
+  is done manually using a `barrier`. Halo regions are shared across
+  locales manually via direct assignment between locally owned arrays.
 
   Values of the `config const` variables can be modified in
   the command line (e.g., `./heat_2D_exchanges --nt=100`)
@@ -122,8 +122,9 @@ proc main() {
 
   // spawn one task for each locale
   coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) {
-    // initialize local arrays and run computation on the locale
+    // run initialization and computation on the task for this locale
     on loc {
+      // initialize local array pairs
       uTaskLocal[tidX, tidY] = new localArrayPair(
         u.localSubdomain(here), // indices owned by this locale from `Block` dist
         indicesInner            // global "compIndices"

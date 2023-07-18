@@ -2,9 +2,9 @@
   A distributed 2D finite-difference heat/diffusion equation solver
 
   Computation is executed over a 2D distributed array.
-	The array distribution is managed by the `Block` distribution.
+  The array distribution is managed by the `Block` distribution.
   The `forall` loop manages task creation and synchronization
-	across and within locales.
+  across and within locales.
 
   Values of the `config const` variables can be modified in
   the command line (e.g., `./heat_2D_dist --nt=100`)
@@ -18,7 +18,7 @@ config const xLen = 2.0,    // length of the domain in x
              nx = 31,       // number of grid points in x
              ny = 31,       // number of grid points in y
              nt = 50,       // number of time steps
-             sigma = 0.25,  // CFL condition
+             sigma = 0.25,  // stability parameter
              nu = 0.05;     // viscosity
 
 // define non-configurable constants
@@ -30,7 +30,7 @@ const dx: real = xLen / (nx - 1),       // grid spacing in x
 const indices = {0..<nx, 0..<ny},
       indicesInner = indices.expand(-1),
       INDICES = Block.createDomain(indices),
-      INDICES_INNER = INDICES[indices_inner];
+      INDICES_INNER = INDICES[indicesInner];
 
 // define a distributed 2D array over the above domain
 var u: [INDICES] real;
@@ -49,9 +49,6 @@ var un = u;
 for 1..nt {
   // swap arrays to prepare for next time step
   u <=> un;
-
-  // swap halo regions between neighboring tasks
-  un.updateFluff();
 
   // compute the FD kernel in parallel
   forall (i, j) in INDICES_INNER do

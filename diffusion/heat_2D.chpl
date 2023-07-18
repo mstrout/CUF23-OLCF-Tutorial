@@ -14,7 +14,7 @@ config const xLen = 2.0,    // length of the domain in x
              nx = 31,       // number of grid points in x
              ny = 31,       // number of grid points in y
              nt = 50,       // number of time steps
-             sigma = 0.25,  // CFL condition
+             sigma = 0.25,  // stability parameter
              nu = 0.05;     // viscosity
 
 // define non-configurable constants

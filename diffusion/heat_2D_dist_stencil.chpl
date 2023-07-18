@@ -2,10 +2,10 @@
   A distributed 2D finite-difference heat/diffusion equation solver
 
   Computation is executed over a 2D distributed array.
-	The array distribution and sharing of "fluff"/"halo"
-	regions are managed by the `Stencil` distribution. The
-	`forall` loop manages task creation and synchronization
-	across and within locales.
+  The array distribution and sharing of "fluff"/"halo"
+  regions are managed by the `Stencil` distribution. The
+  `forall` loop manages task creation and synchronization
+  across and within locales.
 
   Values of the `config const` variables can be modified in
   the command line (e.g., `./heat_2D_dist --nt=100`)
@@ -19,7 +19,7 @@ config const xLen = 2.0,    // length of the domain in x
              nx = 31,       // number of grid points in x
              ny = 31,       // number of grid points in y
              nt = 50,       // number of time steps
-             sigma = 0.25,  // CFL condition
+             sigma = 0.25,  // stability parameter
              nu = 0.05;     // viscosity
 
 // define non-configurable constants
@@ -28,11 +28,13 @@ const dx: real = xLen / (nx - 1),       // grid spacing in x
       dt: real = sigma * dx * dy / nu;  // time step size
 
 // define a distributed 2D domain and subdomain to describe the grid and its interior
-const indices = {0..<nx, 0..<ny} dmapped Stencil({1..<nx-1, 1..<ny-1}, fluff=(1,1)),
-      indicesInner = indices[{1..<nx-1, 1..<ny-1}];
+const indices = {0..<nx, 0..<ny},
+      indicesInner = indices.expand(-1),
+      INDICES = indices dmapped Stencil(indicesInner, fluff=(1,1)),
+      INDICES_INNER = INDICES[{1..<nx-1, 1..<ny-1}];
 
 // define a distributed 2D array over the above domain
-var u: [indices] real;
+var u: [INDICES] real;
 
 // set up initial conditions
 u = 1.0;
@@ -53,7 +55,7 @@ for 1..nt {
   un.updateFluff();
 
   // compute the FD kernel in parallel
-  forall (i, j) in indicesInner do
+  forall (i, j) in INDICES_INNER do
     u[i, j] = un[i, j] +
               nu * dt / dy**2 *
                 (un[i-1, j] - 2 * un[i, j] + un[i+1, j]) +
