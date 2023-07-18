@@ -7,6 +7,9 @@
   is done manually using a `barrier`. Halo regions are shared across
   locales manually via direct assignment between locally owned arrays.
 
+  Similar to `heat_2D_dist_exchanges.chpl`, except local array definition
+  and halo exchanges are facilitated by `localArrayPair` type.
+
   Values of the `config const` variables can be modified in
   the command line (e.g., `./heat_2D_exchanges --nt=100`)
 */
@@ -58,6 +61,8 @@ enum Edge { N, E, S, W }
 // a type to store a tasks local arrays and facilitate sharing of
 //  halo regions between neighboring tasks
 record localArrayPair {
+  var dummy = false;
+
   // the set of global indices that this locale owns
   //  used to index into the global array
   var globalIndices: domain(2);
@@ -75,13 +80,15 @@ record localArrayPair {
   var un: [indices] real;
 
   // default initializer
-  proc init() {
+  proc init(dummy = false) {
+    this.dummy = dummy;
     this.globalIndices = {0..0, 0..0};
     this.indices = {0..0, 0..0};
     this.compIndices = {0..0, 0..0};
   }
 
   proc init(myGlobalIndices: domain(2), globalInnerAll: domain(2)) {
+    this.dummy = false;
     this.globalIndices = myGlobalIndices;
     this.indices = myGlobalIndices.expand(1);
     this.compIndices = myGlobalIndices[globalInnerAll];
@@ -93,12 +100,14 @@ record localArrayPair {
     this.un = this.u;
   }
 
-   proc fillHalo(edge: Edge, const ref values: [] real) {
-    select edge {
-      when Edge.N do this.un[.., this.indices.dim(1).low] = values;
-      when Edge.S do this.un[.., this.indices.dim(1).high] = values;
-      when Edge.E do this.un[this.indices.dim(0).high, ..] = values;
-      when Edge.W do this.un[this.indices.dim(0).low, ..] = values;
+  proc fillHalo(edge: Edge, const ref values: [] real) {
+    if !dummy {
+      select edge {
+        when Edge.N do this.un[.., this.indices.dim(1).low] = values;
+        when Edge.S do this.un[.., this.indices.dim(1).high] = values;
+        when Edge.E do this.un[this.indices.dim(0).high, ..] = values;
+        when Edge.W do this.un[this.indices.dim(0).low, ..] = values;
+      }
     }
   }
 
@@ -152,16 +161,23 @@ proc main() {
 }
 
 proc work(tidX: int, tidY: int) {
-  // get a reference to this task's local array-pair
-  ref uLocal = uTaskLocal[tidX, tidY];
+  // array pair whose `fillHalo` call is a no-op
+  var uDummy = new localArrayPair(true);
+
+  // get a reference to this task's and its neighbors local array-pairs
+  ref uLocal = uTaskLocal[tidX, tidY],
+      uWest  = if tidX > 0       then uTaskLocal[tidX-1, tidY] else uDummy,
+      uEast  = if tidX < tidXMax then uTaskLocal[tidX+1, tidY] else uDummy,
+      uNorth = if tidY > 0       then uTaskLocal[tidX, tidY-1] else uDummy,
+      uSouth = if tidY < tidYMax then uTaskLocal[tidX, tidY+1] else uDummy;
 
   // run FD computation
   for 1..nt {
     // store results from last iteration in neighboring task's halos
-    if tidX > 0       then uTaskLocal[tidX-1, tidY].fillHalo(Edge.E, uLocal[Edge.W]);
-    if tidX < tidXMax then uTaskLocal[tidX+1, tidY].fillHalo(Edge.W, uLocal[Edge.E]);
-    if tidY > 0       then uTaskLocal[tidX, tidY-1].fillHalo(Edge.S, uLocal[Edge.N]);
-    if tidY < tidYMax then uTaskLocal[tidX, tidY+1].fillHalo(Edge.N, uLocal[Edge.S]);
+    uWest.fillHalo(Edge.E, uLocal[Edge.W]);
+    uEast.fillHalo(Edge.W, uLocal[Edge.E]);
+    uNorth.fillHalo(Edge.S, uLocal[Edge.N]);
+    uSouth.fillHalo(Edge.N, uLocal[Edge.S]);
 
     // swap local arrays
     b.barrier();
