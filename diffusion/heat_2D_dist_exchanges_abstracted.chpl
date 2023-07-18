@@ -162,9 +162,9 @@ proc main() {
 
 proc work(tidX: int, tidY: int) {
   // array pair whose `fillHalo` call is a no-op
-  var uDummy = new localArrayPair(true);
+  var uDummy = new localArrayPair(dummy=true);
 
-  // get a reference to this task's and its neighbors local array-pairs
+  // get references to the local array pairs for this task and its neighbors
   ref uLocal = uTaskLocal[tidX, tidY],
       uWest  = if tidX > 0       then uTaskLocal[tidX-1, tidY] else uDummy,
       uEast  = if tidX < tidXMax then uTaskLocal[tidX+1, tidY] else uDummy,
