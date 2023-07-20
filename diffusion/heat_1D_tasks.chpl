@@ -11,17 +11,13 @@
 */
 
 // declare configurable constants with default values
-config const xLen = 2.0,    // length of the grid in x
-             nx = 31,       // number of grid points in x
+config const nx = 4096,     // number of grid points in x
              nt = 50,       // number of time steps
-             sigma = 0.25,  // stability parameter
-             nu = 0.05,     // viscosity
-            nTasks = here.maxTaskPar; // number of tasks
+             alpha = 0.25;  // diffusion constant
 
-// define non-configurable constants
-const dx : real = xLen / (nx - 1),       // grid spacing in x
-      dt : real = sigma * dx / nu,       // time step size
-      npt = nx / nTasks;                 // number of grid points per task
+// set the number of tasks equal to the number of available cores
+const nTasks = here.maxTaskPar,
+      npt = nx / nTasks;
 
 // define a domain to describe the grid
 const indices = {0..<nx},
@@ -32,7 +28,7 @@ var u : [indices] real;
 
 // set up initial conditions
 u = 1.0;
-u[(0.5 / dx):int..<(1.0 / dx + 1):int] = 2;
+u[nx/4..nx/2] = 2.0;
 
 // define array of halo cells for each side of each task
 var halos : [0..1, 0..<nTasks] sync real;
@@ -75,7 +71,7 @@ proc work(tid: int) {
 
     // compute the FD kernel in parallel
     foreach i in taskIndicesComp do
-      uLocal2[i] = uLocal1[i] + nu * dt / dx**2 *
+      uLocal2[i] = uLocal1[i] + alpha *
         (uLocal1[i-1] - 2 * uLocal1[i] + uLocal1[i+1]);
   }
 

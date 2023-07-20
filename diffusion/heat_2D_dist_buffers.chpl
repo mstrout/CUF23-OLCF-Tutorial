@@ -19,18 +19,10 @@ use CommDiagnostics;
 config param RunCommDiag = false;
 
 // declare configurable constants with default values
-config const xLen = 2.0,    // length of the grid in x
-             yLen = 2.0,    // length of the grid in y
-             nx = 31,       // number of grid points in x
-             ny = 31,       // number of grid points in y
+config const nx = 4096,     // number of grid points in x
+             ny = 4096,     // number of grid points in y
              nt = 50,       // number of time steps
-             sigma = 0.25,  // stability parameter
-             nu = 0.05;     // viscosity
-
-// define non-configurable constants
-const dx : real = xLen / (nx - 1),       // grid spacing in x
-      dy : real = yLen / (ny - 1),       // grid spacing in y
-      dt : real = sigma * dx * dy / nu;  // time step size
+             alpha = 0.25;  // diffusion constant
 
 // define distributed domains and block-distributed array
 const indices = {0..<nx, 0..<ny},
@@ -40,10 +32,7 @@ var u: [INDICES] real;
 
 // apply initial conditions
 u = 1.0;
-u[
-  (0.5 / dx):int..<(1.0 / dx + 1):int,
-  (0.5 / dy):int..<(1.0 / dy + 1):int
-] = 2;
+u[nx/4..nx/2, ny/4..ny/2] = 2.0;
 
 // a type for creating a "skyline" array of halo buffers
 record haloArray {
@@ -140,11 +129,11 @@ proc work(tidX: int, tidY: int) {
 
     // compute the FD kernel in parallel
     forall (i, j) in localIndicesInner do
-      uLocal2[i, j] = uLocal1[i, j] +
-        nu * dt / dy**2 *
-          (uLocal1[i-1, j] - 2 * uLocal1[i, j] + uLocal1[i+1, j]) +
-        nu * dt / dx**2 *
-          (uLocal1[i, j-1] - 2 * uLocal1[i, j] + uLocal1[i, j+1]);
+      uLocal2[i, j] = uLocal1[i, j] + alpha * (
+        uLocal1[i-1, j] + uLocal1[i+1, j] +
+        uLocal1[i, j-1] + uLocal1[i, j+1] -
+        4 * uLocal1[i, j]
+      );
 
     b.barrier();
   }
