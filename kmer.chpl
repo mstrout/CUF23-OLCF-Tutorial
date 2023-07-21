@@ -4,7 +4,7 @@
      chpl kmer.chpl
      ./kmer
 
-  For docker usage, see https://chapel-lang.org/install-docker.html
+   For docker usage, see https://chapel-lang.org/install-docker.html
 
    Original version of kmer counting algorithm provided by
    Aryamaan Jain (github strikeraryu) on Chapel Discourse April 7, 2021.

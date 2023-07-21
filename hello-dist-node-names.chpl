@@ -1,4 +1,4 @@
-// from slide 16
+// from slides
 
 coforall loc in Locales {
   on loc {
