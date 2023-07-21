@@ -10,7 +10,11 @@
   the command line (e.g., `./heat_2D_dist --nt=100`)
 */
 
-import BlockDist.Block;
+import BlockDist.Block,
+       Time.Timer;
+
+// create a stopwatch to time kernel execution
+var t = new Timer();
 
 // declare configurable constants with default values
 config const nx = 4096,     // number of grid points in x
@@ -35,6 +39,7 @@ u[nx/4..nx/2, ny/4..ny/2] = 2.0;
 var un = u;
 
 // iterate for 'nt' time steps
+t.start();
 for 1..nt {
   // swap arrays to prepare for next time step
   u <=> un;
@@ -48,4 +53,6 @@ for 1..nt {
 // print final results
 const mean = (+ reduce u) / u.size,
       stdDev = sqrt((+ reduce (u - mean)**2) / u.size);
+t.stop();
 writeln("mean: ", mean, " stdDev: ", stdDev);
+writeln("time: ", t.elapsed(), " (sec)");

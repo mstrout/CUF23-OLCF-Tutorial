@@ -10,6 +10,11 @@
   the command line (e.g., `./heat_1D --nt=100`)
 */
 
+import Time.Timer;
+
+// create a stopwatch to time kernel execution
+var t = new Timer();
+
 // declare configurable constants with default values
 config const nx = 4096,     // number of grid points in x
              nt = 50,       // number of time steps
@@ -35,12 +40,15 @@ var halos : [0..1, 0..<nTasks] sync real;
 param LEFT = 0, RIGHT = 1;
 
 // run the simulation across tasks
+t.start();
 coforall tid in 0..<nTasks do work(tid);
 
 // print final results
 const mean = (+ reduce u) / u.size,
       stdDev = sqrt((+ reduce (u - mean)**2) / u.size);
+t.stop();
 writeln("mean: ", mean, " stdDev: ", stdDev);
+writeln("time: ", t.elapsed(), " (sec)");
 
 proc work(tid: int) {
   // define region of the global array owned by this task
