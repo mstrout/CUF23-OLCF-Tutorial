@@ -78,19 +78,17 @@ FIXME
   hello6-taskpar-dist.chpl
 
 - `basics/basics-*.chpl` - some basic illustrations of parallelism and/or data locality
-FIXME: write and test including basics-distarr.chpl
-
-- `spmd/toy.chpl` and `spmd/toy-SPMD.chpl` - examples showing typical chapel and chapel
-  using SPMD
-FIXME: write and test
+  *NOTE*: basics-on.chpl assume two or more locales
 
 - `parfilekmer.chpl` - parallel and distributed processing of files using a 1D distributed
   array of filenames
 
-- `onClause.chpl` - shows how computation on a locale X can access a variable on a locale Y
-FIXME: write and test
-
-- FIXME Scott's code, grab from testing hierarchy
+- `image_analysis/main.chpl` - coral reef diversity example by Scott Bachman at NCAR
+  shows how to read a single file in parallel
+```
+  chpl main.chpl --fast
+  ./main --in_name=banda_ai --map_type=benthic --window_size=100000
+```
 
 - `gpuExample.chpl` - illustrates how to run code either on the current locale in
   parallel or across GPUs if available

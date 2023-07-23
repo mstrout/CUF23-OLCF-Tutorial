@@ -27,7 +27,7 @@ proc create_distance_mask(radius : real, dx : real, nx : int) {
     }
   }
 
-  // Cefine left and right masks.
+  // Define left and right masks.
   // "left" will represent the left edge of the circle,
   // and "right" will represent the right edge
 
