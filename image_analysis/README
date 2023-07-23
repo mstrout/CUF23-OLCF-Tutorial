@@ -1,0 +1,12 @@
+Copied all contents of this subdirectory from 
+https://github.com/chapel-lang/chapel/tree/main/test/users/bachman/Beta_Diversity
+on July 23, 2023 (commit c8aceece3f4ba4da3144e0e442a380f3121f1db1).
+
+Original README
+---------------
+This program normally requires the NetCDF module, but I have commented it out for the testing.
+So it should just compile with "chpl main.chpl --fast".
+
+It will take in a small input file, banda_ai_benthic.bin
+
+./main --in_name=banda_ai --map_type=benthic --window_size=1000
