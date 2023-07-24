@@ -10,7 +10,12 @@ michelle.strout@hpe.com with the subject heading "CUF23-OLCF-Tutorial question".
 
 ## During the tutorial
 
+```
 wget https://go.lbl.gov/cuf23.tar.gz
+tar xzf cuf23.tar.gz
+cd cuf23
+FIXME: what next?
+```
 
 ## After the tutorial
 
@@ -34,10 +39,11 @@ Using a container on your laptop
 ```
 
 ### Frontier
-See the commands in the provided FIXME.bash script for setup on Frontier
+See the commands in the provided `SOURCE_ME.sh` script for setup on Frontier
 and change them so are using your account and the correct queue.
 Here are examples of those detailed commands.
 
+```
 module load ums/default ums014/default
 module load chapel
 
@@ -48,6 +54,7 @@ chpl hello6-taskpar-dist.chpl
 export CHPL_LAUNCHER_ACCOUNT=CSC296
 export CHPL_LAUNCHER_WALLTIME=00:10:00
 ./hello6-taskpar-dist -nl 2
+```
 
 ### Perlmutter
 
@@ -55,7 +62,24 @@ See the commands in the provided FIXME.bash script for setup on Perlmutter
 and change them so are using your account and the correct queue.
 Here are examples of those detailed commands.
 
-FIXME
+```
+module unload $(module --terse list 2>&1 | grep PrgEnv-)
+module load PrgEnv-gnu
+module load cray-pmi
+module load chapel
+
+# Work around cxi provider bugs that limit memory registration
+# AND using a smaller heap size to reduce startup time for examples
+export CHPL_RT_MAX_HEAP_SIZE=16GB
+export CHPL_LAUNCHER_MEM=unset
+
+# to avoid doing a manual salloc, this isn't working
+export SLURM_QOS=interactive # do I actually need this?
+export SLURM_CONSTRAINT=cpu
+export SLURM_ACCOUNT=<account>
+export CHPL_LAUNCHER_WALLTIME=00:10:00
+```
+Figure out what account you can charge to by using the iris command.
 
 ## Examples covered in slides
 
