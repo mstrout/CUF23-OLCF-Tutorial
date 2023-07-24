@@ -91,10 +91,6 @@ proc work(tidX: int, tidY: int) {
   uTaskLocal[tidX, tidY] = new localArray(localIndicesBuffered);
   unTaskLocal[tidX, tidY] = new localArray(localIndicesBuffered);
 
-  // // get a reference to this task's local arrays
-  // var uLocal = uTaskLocal[tidX, tidY].v,
-  //     unLocal = unTaskLocal[tidX, tidY].v;
-
   // copy initial conditions from global array
   uTaskLocal[tidX, tidY].v = 1;
   uTaskLocal[tidX, tidY].v[myGlobalIndices] = u[myGlobalIndices];

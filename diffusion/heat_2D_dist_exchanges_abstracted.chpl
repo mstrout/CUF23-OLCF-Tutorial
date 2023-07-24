@@ -54,8 +54,6 @@ enum Edge { N, E, S, W }
 // a type to store a tasks local arrays and facilitate sharing of
 //  halo regions between neighboring tasks
 class LocalArrayPair {
-  var dummy = false;
-
   // the set of global indices that this locale owns
   //  used to index into the global array
   var globalIndices: domain(2);
@@ -73,15 +71,13 @@ class LocalArrayPair {
   var un: [indices] real;
 
   // default initializer
-  proc init(dummy = false) {
-    this.dummy = dummy;
+  proc init() {
     this.globalIndices = {0..0, 0..0};
     this.indices = {0..0, 0..0};
     this.compIndices = {0..0, 0..0};
   }
 
   proc init(myGlobalIndices: domain(2), globalInnerAll: domain(2)) {
-    this.dummy = false;
     this.globalIndices = myGlobalIndices;
     this.indices = myGlobalIndices.expand(1);
     this.compIndices = myGlobalIndices[globalInnerAll];
@@ -94,13 +90,11 @@ class LocalArrayPair {
   }
 
   proc fillHalo(edge: Edge, const ref values: [] real) {
-    if !dummy {
-      select edge {
-        when Edge.N do this.un[.., this.indices.dim(1).low] = values;
-        when Edge.S do this.un[.., this.indices.dim(1).high] = values;
-        when Edge.E do this.un[this.indices.dim(0).high, ..] = values;
-        when Edge.W do this.un[this.indices.dim(0).low, ..] = values;
-      }
+    select edge {
+      when Edge.N do this.un[.., this.indices.dim(1).low] = values;
+      when Edge.S do this.un[.., this.indices.dim(1).high] = values;
+      when Edge.E do this.un[this.indices.dim(0).high, ..] = values;
+      when Edge.W do this.un[this.indices.dim(0).low, ..] = values;
     }
   }
 
@@ -157,23 +151,16 @@ proc main() {
 }
 
 proc work(tidX: int, tidY: int) {
-  // array pair whose `fillHalo` call is a no-op
-  var uDummy = new LocalArrayPair(dummy=true);
-
-  // get references to the local array pairs for this task and its neighbors
-  ref uLocal = uTaskLocal[tidX, tidY],
-      uWest  = if tidX > 0       then uTaskLocal[tidX-1, tidY].borrow() else uDummy.borrow(),
-      uEast  = if tidX < tidXMax then uTaskLocal[tidX+1, tidY].borrow() else uDummy.borrow(),
-      uNorth = if tidY > 0       then uTaskLocal[tidX, tidY-1].borrow() else uDummy.borrow(),
-      uSouth = if tidY < tidYMax then uTaskLocal[tidX, tidY+1].borrow() else uDummy.borrow();
+  // get reference to the local array pair for this
+  ref uLocal: borrowed LocalArrayPair = uTaskLocal[tidX, tidY];
 
   // run FD computation
   for 1..nt {
     // store results from last iteration in neighboring task's halos
-    uWest.fillHalo(Edge.E, uLocal[Edge.W]);
-    uEast.fillHalo(Edge.W, uLocal[Edge.E]);
-    uNorth.fillHalo(Edge.S, uLocal[Edge.N]);
-    uSouth.fillHalo(Edge.N, uLocal[Edge.S]);
+    if tidX > 0       then uTaskLocal[tidX-1, tidY].fillHalo(Edge.E, uLocal[Edge.W]);
+    if tidX < tidXMax then uTaskLocal[tidX+1, tidY].fillHalo(Edge.W, uLocal[Edge.E]);
+    if tidY > 0       then uTaskLocal[tidX, tidY-1].fillHalo(Edge.S, uLocal[Edge.N]);
+    if tidY < tidYMax then uTaskLocal[tidX, tidY+1].fillHalo(Edge.N, uLocal[Edge.S]);
 
     // swap local arrays
     b.barrier();
