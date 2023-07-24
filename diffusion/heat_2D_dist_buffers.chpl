@@ -44,7 +44,7 @@ record haloArray {
   var v: [d] real;
 
   proc init() do this.d = {0..0};
-  proc init(r: range(int, boundKind.both, strideKind.one)) do
+  proc init(r: range(int)) do
     this.d = {r};
 }
 
