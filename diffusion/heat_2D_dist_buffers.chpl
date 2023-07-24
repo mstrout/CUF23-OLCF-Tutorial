@@ -12,7 +12,11 @@
 */
 
 import BlockDist.Block,
-       Collectives.barrier;
+       Collectives.barrier,
+       Time.Timer;
+
+// create a stopwatch to time kernel execution
+var t = new Timer();
 
 // compile with `-sRunCommDiag=true` to see comm diagnostics
 use CommDiagnostics;
@@ -62,6 +66,7 @@ proc main() {
   if RunCommDiag then startCommDiagnostics();
 
   // spawn one task for each locale
+  t.start();
   coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) {
     // run initialization and computation on the task for this locale
     on loc {
@@ -87,7 +92,9 @@ proc main() {
   // print final results
   const mean = (+ reduce u) / u.size,
         stdDev = sqrt((+ reduce (u - mean)**2) / u.size);
+  t.stop();
   writeln("mean: ", mean, " stdDev: ", stdDev);
+  writeln("time: ", t.elapsed(), " (sec)");
 }
 
 proc work(tidX: int, tidY: int) {

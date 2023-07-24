@@ -8,6 +8,11 @@
   the command line (e.g., `./heat_1D --nt=100`)
 */
 
+import Time.Timer;
+
+// create a stopwatch to time kernel execution
+var t = new Timer();
+
 // declare configurable constants with default values
 config const nx = 4096,     // number of grid points in x
              nt = 50,       // number of time steps
@@ -28,6 +33,7 @@ u[nx/4..nx/2] = 2.0;
 var un = u;
 
 // iterate for 'nt' time steps
+t.start();
 for 1..nt {
   // swap the arrays to prepare for the next time step
   u <=> un;
@@ -40,4 +46,6 @@ for 1..nt {
 // print final results
 const mean = (+ reduce u) / u.size,
       stdDev = sqrt((+ reduce (u - mean)**2) / u.size);
+t.stop();
 writeln("mean: ", mean, " stdDev: ", stdDev);
+writeln("time: ", t.elapsed(), " (sec)");
