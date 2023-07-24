@@ -63,9 +63,9 @@ proc main() {
 
   // spawn one task for each locale
   t.start();
-  coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) {
+  coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) do on loc {
     // run initialization and computation on the task for this locale
-    on loc do work(tidX, tidY);
+    work(tidX, tidY);
   }
 
   if RunCommDiag {

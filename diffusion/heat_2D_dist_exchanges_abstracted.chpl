@@ -112,29 +112,26 @@ class LocalArrayPair {
 
 // set up an array of local arrays over same distribution as 'u.targetLocales'
 var LOCALE_DOM = Block.createDomain(u.targetLocales().domain),
-    uTaskLocal : [LOCALE_DOM] owned LocalArrayPair;
+    uTaskLocal = [l in LOCALE_DOM] new LocalArrayPair();
 
 proc main() {
   if RunCommDiag then startCommDiagnostics();
 
   // spawn one task for each locale
   t.start();
-  coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) {
-    // run initialization and computation on the task for this locale
-    on loc {
-      // initialize local array pairs
-      uTaskLocal[tidX, tidY] = new LocalArrayPair(
-        u.localSubdomain(here), // indices owned by this locale from `Block` dist
-        indicesInner            // global "compIndices"
-      );
-      uTaskLocal[tidX, tidY].copyInitialConditions(u);
+  coforall (loc, (tidX, tidY)) in zip(u.targetLocales(), LOCALE_DOM) do on loc {
+    // initialize local array pairs
+    uTaskLocal[tidX, tidY] = new LocalArrayPair(
+      u.localSubdomain(here), // indices owned by this locale from `Block` dist
+      indicesInner            // global "compIndices"
+    );
+    uTaskLocal[tidX, tidY].copyInitialConditions(u);
 
-      // synchronize across tasks
-      b.barrier();
+    // synchronize across tasks
+    b.barrier();
 
-      // run the portion of the FD computation owned by this task
-      work(tidX, tidY);
-    }
+    // run the portion of the FD computation owned by this task
+    work(tidX, tidY);
   }
 
   if RunCommDiag {
