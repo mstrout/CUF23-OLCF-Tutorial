@@ -8,7 +8,7 @@
   locales manually via direct assignment between locally owned arrays.
 
   Similar to `heat_2D_dist_exchanges.chpl`, except local array definition
-  and halo exchanges are facilitated by `localArrayPair` type.
+  and halo exchanges are facilitated by `LocalArrayPair` type.
 
   Values of the `config const` variables can be modified in
   the command line (e.g., `./heat_2D_exchanges --nt=100`)
@@ -53,7 +53,7 @@ enum Edge { N, E, S, W }
 
 // a type to store a tasks local arrays and facilitate sharing of
 //  halo regions between neighboring tasks
-record localArrayPair {
+class LocalArrayPair {
   var dummy = false;
 
   // the set of global indices that this locale owns
@@ -118,7 +118,7 @@ record localArrayPair {
 
 // set up an array of local arrays over same distribution as 'u.targetLocales'
 var LOCALE_DOM = Block.createDomain(u.targetLocales().domain),
-    uTaskLocal : [LOCALE_DOM] localArrayPair;
+    uTaskLocal : [LOCALE_DOM] owned LocalArrayPair;
 
 proc main() {
   if RunCommDiag then startCommDiagnostics();
@@ -129,7 +129,7 @@ proc main() {
     // run initialization and computation on the task for this locale
     on loc {
       // initialize local array pairs
-      uTaskLocal[tidX, tidY] = new localArrayPair(
+      uTaskLocal[tidX, tidY] = new LocalArrayPair(
         u.localSubdomain(here), // indices owned by this locale from `Block` dist
         indicesInner            // global "compIndices"
       );
@@ -158,14 +158,14 @@ proc main() {
 
 proc work(tidX: int, tidY: int) {
   // array pair whose `fillHalo` call is a no-op
-  var uDummy = new localArrayPair(dummy=true);
+  var uDummy = new LocalArrayPair(dummy=true);
 
   // get references to the local array pairs for this task and its neighbors
   ref uLocal = uTaskLocal[tidX, tidY],
-      uWest  = if tidX > 0       then uTaskLocal[tidX-1, tidY] else uDummy,
-      uEast  = if tidX < tidXMax then uTaskLocal[tidX+1, tidY] else uDummy,
-      uNorth = if tidY > 0       then uTaskLocal[tidX, tidY-1] else uDummy,
-      uSouth = if tidY < tidYMax then uTaskLocal[tidX, tidY+1] else uDummy;
+      uWest  = if tidX > 0       then uTaskLocal[tidX-1, tidY].borrow() else uDummy.borrow(),
+      uEast  = if tidX < tidXMax then uTaskLocal[tidX+1, tidY].borrow() else uDummy.borrow(),
+      uNorth = if tidY > 0       then uTaskLocal[tidX, tidY-1].borrow() else uDummy.borrow(),
+      uSouth = if tidY < tidYMax then uTaskLocal[tidX, tidY+1].borrow() else uDummy.borrow();
 
   // run FD computation
   for 1..nt {

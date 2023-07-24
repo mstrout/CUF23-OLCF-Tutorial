@@ -91,14 +91,14 @@ proc work(tidX: int, tidY: int) {
   uTaskLocal[tidX, tidY] = new localArray(localIndicesBuffered);
   unTaskLocal[tidX, tidY] = new localArray(localIndicesBuffered);
 
-  // get a reference to this task's local arrays
-  ref uLocal = uTaskLocal[tidX, tidY].v,
-      unLocal = unTaskLocal[tidX, tidY].v;
+  // // get a reference to this task's local arrays
+  // var uLocal = uTaskLocal[tidX, tidY].v,
+  //     unLocal = unTaskLocal[tidX, tidY].v;
 
   // copy initial conditions from global array
-  uLocal = 1;
-  uLocal[myGlobalIndices] = u[myGlobalIndices];
-  unLocal = uLocal;
+  uTaskLocal[tidX, tidY].v = 1;
+  uTaskLocal[tidX, tidY].v[myGlobalIndices] = u[myGlobalIndices];
+  unTaskLocal[tidX, tidY].v = uTaskLocal[tidX, tidY].v;
 
   // define constants for indexing into edges of local array
   const N = myGlobalIndices.dim(1).low,
@@ -117,27 +117,27 @@ proc work(tidX: int, tidY: int) {
   // run FD computation
   for 1..nt {
     // store results from last iteration in neighboring task's halos
-    if tidX > 0       then unTaskLocal[tidX-1, tidY].v[EE, ..] = unLocal[W, ..];
-    if tidX < tidXMax then unTaskLocal[tidX+1, tidY].v[WW, ..] = unLocal[E, ..];
-    if tidY > 0       then unTaskLocal[tidX, tidY-1].v[.., SS] = unLocal[.., N];
-    if tidY < tidYMax then unTaskLocal[tidX, tidY+1].v[.., NN] = unLocal[.., S];
+    if tidX > 0       then unTaskLocal[tidX-1, tidY].v[EE, ..] = unTaskLocal[tidX, tidY].v[W, ..];
+    if tidX < tidXMax then unTaskLocal[tidX+1, tidY].v[WW, ..] = unTaskLocal[tidX, tidY].v[E, ..];
+    if tidY > 0       then unTaskLocal[tidX, tidY-1].v[.., SS] = unTaskLocal[tidX, tidY].v[.., N];
+    if tidY < tidYMax then unTaskLocal[tidX, tidY+1].v[.., NN] = unTaskLocal[tidX, tidY].v[.., S];
 
     // swap all local arrays
     b.barrier();
-    uLocal <=> unLocal;
+    uTaskLocal[tidX, tidY].v <=> unTaskLocal[tidX, tidY].v;
 
     // compute the FD kernel in parallel
     foreach (i, j) in localIndicesInner do
-      unLocal[i, j] = uLocal[i, j] + alpha * (
-          uLocal[i-1, j] + uLocal[i+1, j] +
-          uLocal[i, j-1] + uLocal[i, j+1] -
-          4 * uLocal[i, j]
+      unTaskLocal[tidX, tidY].v[i, j] = uTaskLocal[tidX, tidY].v[i, j] + alpha * (
+          uTaskLocal[tidX, tidY].v[i-1, j] + uTaskLocal[tidX, tidY].v[i+1, j] +
+          uTaskLocal[tidX, tidY].v[i, j-1] + uTaskLocal[tidX, tidY].v[i, j+1] -
+          4 * uTaskLocal[tidX, tidY].v[i, j]
         );
 
     b.barrier();
   }
 
   // store results in global array
-  uLocal <=> unLocal;
-  u[myGlobalIndices] = uLocal[myGlobalIndices];
+  uTaskLocal[tidX, tidY].v <=> unTaskLocal[tidX, tidY].v;
+  u[myGlobalIndices] = uTaskLocal[tidX, tidY].v[myGlobalIndices];
 }
