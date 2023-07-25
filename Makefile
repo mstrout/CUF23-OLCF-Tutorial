@@ -33,7 +33,6 @@ PROGRAMS = \
   heat_1D \
   heat_1D_dist \
   heat_1D_tasks \
-  main \
   gpuExample \
   hello-dist-node-names \
   hello \
@@ -44,40 +43,16 @@ PROGRAMS = \
   stream-ep \
   writelnExamples
 
-REALS = \
-  basics-coforall_real \
-  basics-distarr_real \
-  basics-for_real \
-  basics-on_real \
-  heat_2D_real \
-  heat_2D_dist_real \
-  heat_2D_dist_stencil_real \
-  heat_2D_dist_buffers_real \
-  heat_2D_dist_exchanges_real \
-  heat_2D_dist_exchanges_abstracted_real \
-  heat_1D_real \
-  heat_1D_dist_real \
-  heat_1D_tasks_real \
-  main_real \
-  gpuExample_real \
-  hello-dist-node-names_real \
-  hello_real \
-  hello6-taskpar-dist_real \
-  hellopar_real \
-  kmer_real \
-  parfilekmer_real \
-  stream-ep_real \
-  writelnExamples_real
-
 all: $(PROGRAMS)
 
-# The rule for building any example.
-%: %.chpl
-	$(CHPL) $@.chpl -o $@ --fast --no-warnings
++EXTRA_FLAGS ?=
+
+ # The rule for building any example.
+ %: %.chpl
+      $(CHPL) $@.chpl -o $@ --fast --no-warnings $(EXTRA_FLAGS)
 
 # --------------------------------------------------------
 # Everything below is convenience targets for usability
-
 
 # runs all the programs currently built in the working directory
 run:
@@ -93,7 +68,7 @@ run-%: % force
 	./$< $(EXECARG)
 
 clean:
-	rm -f $(PROGRAMS) $(REALS)
+	rm -f $(PROGRAMS) $(PROGRAMS:=_real)
 
 force:
 
