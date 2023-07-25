@@ -13,10 +13,10 @@ else
 CHPL=$(CHPL_INSTALL)/bin/chpl
 endif
 
-ifeq ($(CHPL_COMM), "none")
-EXECARG = ""
+ifeq ($(CHPL_COMM),"none")
+EXECARG=
 else
-EXECARG = "-nl1"
+EXECARG=-nl1
 endif
 
 # --------------------------------------------------------
@@ -24,6 +24,10 @@ endif
 
 # Programs to build, assuming each has a corresponding *.chpl file
 PROGRAMS = \
+  basics-coforall \
+  basics-distarr \
+  basics-for \
+  basics-on \
   heat_2D \
   heat_2D_dist \
   heat_2D_dist_stencil \
@@ -45,6 +49,10 @@ PROGRAMS = \
   writelnExamples
 
 REALS = \
+  basics-coforall_real \
+  basics-distarr_real \
+  basics-for_real \
+  basics-on_real \
   heat_2D_real \
   heat_2D_dist_real \
   heat_2D_dist_stencil_real \
@@ -65,7 +73,32 @@ REALS = \
   stream-ep_real \
   writelnExamples_real
 
-all: $(PROGRAMS)
+PROGRAMS_PATHS = \
+  basics/basics-coforall \
+  basics/basics-distarr \
+  basics/basics-for \
+  basics/basics-on \
+  diffusion/heat_2D \
+  diffusion/heat_2D_dist \
+  diffusion/heat_2D_dist_stencil \
+  diffusion/heat_2D_dist_buffers \
+  diffusion/heat_2D_dist_exchanges \
+  diffusion/heat_2D_dist_exchanges_abstracted \
+  diffusion/heat_1D \
+  diffusion/heat_1D_dist \
+  diffusion/heat_1D_tasks \
+  image_analysis/main \
+  gpuExample \
+  hello-dist-node-names \
+  hello \
+  hello6-taskpar-dist \
+  hellopar \
+  kmer \
+  parfilekmer \
+  stream-ep \
+  writelnExamples
+
+all: $(PROGRAMS_PATHS)
 
 # The rule for building any example.
 %: %.chpl
@@ -81,7 +114,7 @@ run:
 	@for f in $(PROGRAMS) ; do \
 	  if test -x $$f ; then \
 	    rm -f $(OUTPUT) ; \
-	    ( set -x ; ./$$f ; ) ; \
+	    ( set -x ; ./$$f $(EXECARG) ; ) ; \
 	    if test -f $(OUTPUT) ; then \
 	      echo $(OUTPUT) : ; cat $(OUTPUT) ; \
 	    fi ; \
@@ -97,7 +130,7 @@ run-%: % force
 	  fi
 
 clean:
-	rm -f $(PROGRAMS) $(OUTPUT) $(REALS)
+	rm -f $(PROGRAMS) $(REALS) $(OUTPUT)
 
 force:
 
