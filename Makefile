@@ -70,7 +70,6 @@ run:
 
 # builds and runs a particular test (eg `make run-ex0`)
 run-%: % force
-	echo ./$< $(EXECARG)
 	./$< $(EXECARG)
 
 clean:
