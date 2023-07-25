@@ -9,11 +9,14 @@
 
 CHPL=chpl
 
-ifeq ($(CHPL_COMM),"none")
-EXECARG=
+ifneq ($(strip $(SLURM_JOB_NUM_NODES)),)
+  EXECARG ?= -nl $(SLURM_JOB_NUM_NODES)
+else ifneq (, $(shell which srun 2> /dev/null))
+  EXECARG ?= -nl 1
 else
-EXECARG=-nl1
+  EXECARG ?=
 endif
+
 
 # --------------------------------------------------------
 # Program build logic
