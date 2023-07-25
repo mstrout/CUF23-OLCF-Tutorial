@@ -71,7 +71,7 @@ run-%: % force
 	./$< $(EXECARG)
 
 clean:
-	rm -f $(PROGRAMS) $(PROGRAMS:=_real)
+	rm -f $(PROGRAMS) $(PROGRAMS:=_real) main main_real
 
 force:
 
