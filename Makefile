@@ -1,6 +1,11 @@
 # This Makefile demonstrates the recommended way to build small Chapel programs.
 # Note this uses some GNU make extensions for conciseness.
 #
+# To run an example like heat_2D do the following command:
+#    make run-heat_2D
+# If you just want to compile then do
+#    make heat_2D
+#
 
 CHPL=chpl
 
@@ -64,32 +69,7 @@ REALS = \
   stream-ep_real \
   writelnExamples_real
 
-PROGRAMS_PATHS = \
-  basics/basics-coforall \
-  basics/basics-distarr \
-  basics/basics-for \
-  basics/basics-on \
-  diffusion/heat_2D \
-  diffusion/heat_2D_dist \
-  diffusion/heat_2D_dist_stencil \
-  diffusion/heat_2D_dist_buffers \
-  diffusion/heat_2D_dist_exchanges \
-  diffusion/heat_2D_dist_exchanges_abstracted \
-  diffusion/heat_1D \
-  diffusion/heat_1D_dist \
-  diffusion/heat_1D_tasks \
-  image_analysis/main \
-  gpuExample \
-  hello-dist-node-names \
-  hello \
-  hello6-taskpar-dist \
-  hellopar \
-  kmer \
-  parfilekmer \
-  stream-ep \
-  writelnExamples
-
-all: $(PROGRAMS_PATHS)
+all: $(PROGRAMS)
 
 # The rule for building any example.
 %: %.chpl
