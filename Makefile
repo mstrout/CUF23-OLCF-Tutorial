@@ -1,17 +1,8 @@
-# This Makefile demonstrates the recommended way to build simple Chapel programs.
+# This Makefile demonstrates the recommended way to build small Chapel programs.
 # Note this uses some GNU make extensions for conciseness.
 #
-# To use this makefile, set the CHPL_INSTALL variable to the chpl install directory, e.g.
-# make CHPL_INSTALL=<myinstalldir> hello-world
-# or (for bash)
-# export CHPL_INSTALL=<myinstalldir>; make hello-world
 
-ifeq ($(CHPL_INSTALL),)
-$(warning CHPL_INSTALL environment variable is not set, assuming chpl is in the PATH)
 CHPL=chpl
-else
-CHPL=$(CHPL_INSTALL)/bin/chpl
-endif
 
 ifeq ($(CHPL_COMM),"none")
 EXECARG=
@@ -102,35 +93,27 @@ all: $(PROGRAMS_PATHS)
 
 # The rule for building any example.
 %: %.chpl
-	$(CHPL) $@.chpl --fast --no-warnings
+	$(CHPL) $@.chpl -o $@ --fast --no-warnings
 
 # --------------------------------------------------------
 # Everything below is convenience targets for usability
 
-OUTPUT = output.txt
 
 # runs all the programs currently built in the working directory
 run:
 	@for f in $(PROGRAMS) ; do \
 	  if test -x $$f ; then \
-	    rm -f $(OUTPUT) ; \
 	    ( set -x ; ./$$f $(EXECARG) ; ) ; \
-	    if test -f $(OUTPUT) ; then \
-	      echo $(OUTPUT) : ; cat $(OUTPUT) ; \
-	    fi ; \
 	  fi ; \
 	done
 
 # builds and runs a particular test (eg `make run-ex0`)
 run-%: % force
-	-@rm -f $(OUTPUT)
+	echo ./$< $(EXECARG)
 	./$< $(EXECARG)
-	-@if test -f $(OUTPUT) ; then \
-	     echo $(OUTPUT) : ; cat $(OUTPUT) ; \
-	  fi
 
 clean:
-	rm -f $(PROGRAMS) $(REALS) $(OUTPUT)
+	rm -f $(PROGRAMS) $(REALS)
 
 force:
 
