@@ -45,11 +45,11 @@ PROGRAMS = \
 
 all: $(PROGRAMS)
 
-+EXTRA_FLAGS ?=
+EXTRA_FLAGS ?= 
 
- # The rule for building any example.
- %: %.chpl
-      $(CHPL) $@.chpl -o $@ --fast --no-warnings $(EXTRA_FLAGS)
+# The rule for building any example.
+%: %.chpl
+	$(CHPL) $@.chpl -o $@ --fast --no-warnings $(EXTRA_FLAGS)
 
 # --------------------------------------------------------
 # Everything below is convenience targets for usability
