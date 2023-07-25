@@ -31,6 +31,10 @@ To run the `image_analysis/main.chpl` example.
   ./main --in_name=banda_ai --map_type=benthic --window_size=100000
 ```
 
+Do some scaling experiments:
+```
+for ((i=8;i>128;i/=2)); do echo @$i; env CHPL_RT_NUM_THREADS_PER_LOCALE=$i ./heat_2D -nl 1; done |& tee ll
+```
 
 ## After the tutorial
 
