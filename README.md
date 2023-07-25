@@ -14,8 +14,23 @@ michelle.strout@hpe.com with the subject heading "CUF23-OLCF-Tutorial question".
 wget https://go.lbl.gov/cuf23.tar.gz
 tar xzf cuf23.tar.gz
 cd cuf23
-FIXME: what next?
+// you might want to read the README.md in this directory
+source SOURCE_ME.sh
+cd chapel
 ```
+
+To compile and run any of the example programs, e.g. hello.chpl, do the following command:
+```
+make run-hello
+```
+
+To run the `image_analysis/main.chpl` example.
+```
+  cd image_analysis
+  chpl main.chpl --fast
+  ./main --in_name=banda_ai --map_type=benthic --window_size=100000
+```
+
 
 ## After the tutorial
 
@@ -58,7 +73,7 @@ export CHPL_LAUNCHER_WALLTIME=00:10:00
 
 ### Perlmutter
 
-See the commands in the provided FIXME.bash script for setup on Perlmutter
+See the commands in the provided SOURCE_ME.sh script for setup on Perlmutter
 and change them so are using your account and the correct queue.
 Here are examples of those detailed commands.
 
@@ -73,8 +88,7 @@ module load chapel
 export CHPL_RT_MAX_HEAP_SIZE=16GB
 export CHPL_LAUNCHER_MEM=unset
 
-# to avoid doing a manual salloc, this isn't working
-export SLURM_QOS=interactive # do I actually need this?
+# to avoid doing a manual salloc
 export SLURM_CONSTRAINT=cpu
 export SLURM_ACCOUNT=<account>
 export CHPL_LAUNCHER_WALLTIME=00:10:00
@@ -86,9 +100,9 @@ Figure out what account you can charge to by using the iris command.
 20-minute intro
 - `hello-dist-node-name.chpl` - parallel and distributed 'Hello World' that prints out locale names
 
-- `diffusion/heat_2D.chpl` - shared memory parallel version that runs in locale 0
+- `heat_2D.chpl` - shared memory parallel version that runs in locale 0
 
-- `diffusion/heat_2D_dist.chpl` - parallel and distributed version that is the same as
+- `heat_2D_dist.chpl` - parallel and distributed version that is the same as
 
   `heat_2D.chpl` but with distributed arrays
 
@@ -101,7 +115,7 @@ Figure out what account you can charge to by using the iris command.
 - `hellopar.chpl` - another parallel and distributed 'Hello World', short version of
   hello6-taskpar-dist.chpl
 
-- `basics/basics-*.chpl` - some basic illustrations of parallelism and/or data locality
+- `basics-*.chpl` - some basic illustrations of parallelism and/or data locality
   *NOTE*: basics-on.chpl assume two or more locales
 
 - `parfilekmer.chpl` - parallel and distributed processing of files using a 1D distributed
@@ -123,5 +137,5 @@ Figure out what account you can charge to by using the iris command.
 
 - `writelnExamples.chpl` - you can write out almost any variable in Chapel with `writeln`
 
-- `diffusion/*.chpl` - there are some 1D and other 2D heat diffusion examples in this
+- `heat*.chpl` - there are some 1D and other 2D heat diffusion examples in this
    directory.
