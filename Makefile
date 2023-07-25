@@ -10,11 +10,14 @@
 CHPL=chpl
 
 ifneq ($(strip $(SLURM_JOB_NUM_NODES)),)
+  # Inside an salloc session
   EXECARG ?= -nl $(SLURM_JOB_NUM_NODES)
 else ifneq (, $(shell which srun 2> /dev/null))
+  # From a login node with SLURM
   EXECARG ?= -nl 1
 else
-  EXECARG ?=
+  # Unknown system (e.g. AWS or other)
+  EXECARG ?= -nl 1
 endif
 
 
