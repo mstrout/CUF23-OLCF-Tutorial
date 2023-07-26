@@ -10,11 +10,14 @@
 CHPL=chpl
 
 ifneq ($(strip $(SLURM_JOB_NUM_NODES)),)
+  # Inside an salloc session
   EXECARG ?= -nl $(SLURM_JOB_NUM_NODES)
 else ifneq (, $(shell which srun 2> /dev/null))
+  # From a login node with SLURM
   EXECARG ?= -nl 1
 else
-  EXECARG ?=
+  # Unknown system (e.g. AWS or other)
+  EXECARG ?= -nl 1
 endif
 
 
@@ -52,7 +55,7 @@ EXTRA_FLAGS ?=
 
 # The rule for building any example.
 %: %.chpl
-	$(CHPL) $@.chpl -o $@ --fast --no-warnings $(EXTRA_FLAGS)
+	$(CHPL) $@.chpl --fast --no-warnings $(EXTRA_FLAGS)
 
 # --------------------------------------------------------
 # Everything below is convenience targets for usability
@@ -67,7 +70,6 @@ run:
 
 # builds and runs a particular test (eg `make run-ex0`)
 run-%: % force
-	echo ./$< $(EXECARG)
 	./$< $(EXECARG)
 
 clean:

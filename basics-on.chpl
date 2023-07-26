@@ -1,4 +1,7 @@
-// assumes -nl 2 or more.  Need at least two locales.
+if (numLocales < 2) {
+  warning("This program assumes 2 or more locales, please run with -nl 2");
+  exit();
+}
 
 writeln("Hello from locale ", here.id);
 
