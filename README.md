@@ -33,7 +33,7 @@ To run the `image_analysis/main.chpl` example.
 
 Do some scaling experiments:
 ```
-for ((i=8;i>128;i/=2)); do echo @$i; env CHPL_RT_NUM_THREADS_PER_LOCALE=$i ./heat_2D -nl 1; done |& tee ll
+for ((i=8;i<=64;i*=2)); do echo @$i; env CHPL_RT_NUM_THREADS_PER_LOCALE=$i ./heat_2D -nl 1; done |& tee ll
 ```
 
 ## After the tutorial
@@ -57,47 +57,6 @@ Using a container on your laptop
  docker run --rm -v "$PWD":/myapp -w /myapp chapel/chapel-gasnet ./hello -nl 1
 ```
 
-### Frontier
-See the commands in the provided `SOURCE_ME.sh` script for setup on Frontier
-and change them so are using your account and the correct queue.
-Here are examples of those detailed commands.
-
-```
-module load ums/default ums014/default
-module load chapel
-
-git clone git@github.com:mstrout/CUF23-OLCF-Tutorial.git
-cd CUF23-OLCF-Tutorial
-chpl hello6-taskpar-dist.chpl
-
-export CHPL_LAUNCHER_ACCOUNT=CSC296
-export CHPL_LAUNCHER_WALLTIME=00:10:00
-./hello6-taskpar-dist -nl 2
-```
-
-### Perlmutter
-
-See the commands in the provided SOURCE_ME.sh script for setup on Perlmutter
-and change them so are using your account and the correct queue.
-Here are examples of those detailed commands.
-
-```
-module unload $(module --terse list 2>&1 | grep PrgEnv-)
-module load PrgEnv-gnu
-module load cray-pmi
-module load chapel
-
-# Work around cxi provider bugs that limit memory registration
-# AND using a smaller heap size to reduce startup time for examples
-export CHPL_RT_MAX_HEAP_SIZE=16GB
-export CHPL_LAUNCHER_MEM=unset
-
-# to avoid doing a manual salloc
-export SLURM_CONSTRAINT=cpu
-export SLURM_ACCOUNT=<account>
-export CHPL_LAUNCHER_WALLTIME=00:10:00
-```
-Figure out what account you can charge to by using the iris command.
 
 ## Examples covered in slides
 
@@ -142,4 +101,4 @@ Figure out what account you can charge to by using the iris command.
 - `writelnExamples.chpl` - you can write out almost any variable in Chapel with `writeln`
 
 - `heat*.chpl` - there are some 1D and other 2D heat diffusion examples in this
-   directory.
+   directory.  The `heat_1D_tasks.chpl` example has an example of using `sync` variables.
